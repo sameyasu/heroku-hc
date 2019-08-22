@@ -11,6 +11,14 @@
             "HerokuHC\\": ["src/"]
         }
     },
+    "scripts": {
+        "runner": [
+            "HerokuHC\\Runner::start"
+        ]
+    },
+    "config": {
+        "process-timeout": 0
+    },
     "license": "MIT",
     "minimum-stability": "stable"
 }

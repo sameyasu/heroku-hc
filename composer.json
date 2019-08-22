@@ -6,6 +6,11 @@
         "monolog/monolog": "^1.24",
         "guzzlehttp/guzzle": "^6.3"
     },
+    "autoload": {
+        "psr-4": {
+            "HerokuHC\\": ["src/"]
+        }
+    },
     "license": "MIT",
     "minimum-stability": "stable"
 }

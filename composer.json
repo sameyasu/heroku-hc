@@ -1,0 +1,11 @@
+{
+    "name": "sameyasu/heroku-hc",
+    "description": "Health Checker for Heroku",
+    "type": "project",
+    "require": {
+        "monolog/monolog": "^1.24",
+        "guzzlehttp/guzzle": "^6.3"
+    },
+    "license": "MIT",
+    "minimum-stability": "stable"
+}

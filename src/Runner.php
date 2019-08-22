@@ -15,8 +15,31 @@ namespace HerokuHC;
  **/
 final class Runner
 {
+    use MonologLoggerTrait;
+
+    /**
+     * Constructor
+     **/
+    private function __construct()
+    {
+        $this->initLogger();
+    }
+
+    /**
+     * Starting runner
+     * @return void
+     */
     public static function start() : void
     {
-        echo 'Ran';
+        $me = new self();
+        $me->run();
+    }
+
+    /**
+     * Running
+     */
+    public function run() : void
+    {
+        $this->logger->info('Started');
     }
 }

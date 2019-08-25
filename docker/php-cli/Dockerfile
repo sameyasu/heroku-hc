@@ -14,7 +14,8 @@ WORKDIR /app
 RUN set -ex; \
     adduser -D runner; \
     chown runner /app; \
-    su - runner -c "sh /usr/local/bin/install-app.sh"
+    su - runner -c "sh /usr/local/bin/install-app.sh"; \
+    rm -f /usr/local/bin/install-app.sh
 
 USER runner
 ENTRYPOINT ["composer", "run-script", "runner"]

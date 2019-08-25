@@ -8,13 +8,13 @@ RUN set -ex; \
     chmod +x composer.phar; \
     ln -sf composer.phar composer
 
+ADD ./install-app.sh /usr/local/bin
+
 WORKDIR /app
 RUN set -ex; \
-    git clone --depth 1 https://github.com/sameyasu/heroku-hc.git .; \
-    composer install
-
-RUN set -ex; \
-    adduser -D runner
+    adduser -D runner; \
+    chown runner /app; \
+    su - runner -c "sh /usr/local/bin/install-app.sh"
 
 USER runner
 ENTRYPOINT ["composer", "run-script", "runner"]

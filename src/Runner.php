@@ -53,6 +53,13 @@ final class Runner
     {
         $url = getenv('HC_URL');
         $interval = getenv('INTERVAL') ? getenv('INTERVAL') : 10 * 60;
+        if (preg_match('/\A(?<min>[0-9]+)\-(?<max>[0-9]+)\z/', $interval, $matches) === 1) {
+            $minInterval = $matches['min'];
+            $maxInterval = $matches['max'];
+        } else {
+            $minInterval = $interval;
+            $maxInterval = $interval;
+        }
 
         $this->logger->info('Started', ['HC_URL' => $url, 'interval' => $interval]);
 
@@ -60,7 +67,9 @@ final class Runner
             $result = $this->checkUrl($url);
             $this->logger->info('Checked', ['result' => $result]);
 
-            sleep($interval);
+            $intervalInSec = $this->getInterval($minInterval, $maxInterval);
+            $this->logger->debug('Interval', ['seconds' => $intervalInSec]);
+            sleep($intervalInSec);
         }
     }
 
@@ -102,5 +111,20 @@ final class Runner
         $this->httpClient = new Client([
             'timeout'  => 10.0,
         ]);
+    }
+
+    /**
+     * Calculate interval in seconds
+     * @param int $min
+     * @param int $max
+     * @return int
+     */
+    private function getInterval(int $min, int $max) : int
+    {
+        if ($min === $max || $max < $min) {
+            return $min;
+        }
+
+        return mt_rand($min, $max);
     }
 }

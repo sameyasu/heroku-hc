@@ -76,7 +76,8 @@ final class Runner
             $this->logger->info('Checked', ['result' => $result]);
 
             $intervalInSec = $this->getInterval($minInterval, $maxInterval);
-            $this->logger->debug('Interval', ['seconds' => $intervalInSec]);
+            $nextRuns = date('Y-m-d H:i:sP', time() + $intervalInSec);
+            $this->logger->debug('Interval', ['seconds' => $intervalInSec, 'next' => $nextRuns]);
             sleep($intervalInSec);
         }
     }

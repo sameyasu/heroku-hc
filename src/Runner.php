@@ -52,10 +52,18 @@ final class Runner
     public function run() : void
     {
         $url = getenv('HC_URL');
+        if (preg_match('|\Ahttps?://|', $url, $matches) !== 1) {
+            $this->logger->warning('Invalid URL', ['url' => $url]);
+            return;
+        }
+
         $interval = getenv('INTERVAL') ? getenv('INTERVAL') : 10 * 60;
         if (preg_match('/\A(?<min>[0-9]+)-(?<max>[0-9]+)\z/', $interval, $matches) === 1) {
             $minInterval = $matches['min'];
             $maxInterval = $matches['max'];
+        } elseif (!is_numeric($interval)) {
+            $this->logger->warning('Invalid Interval', ['interval' => $interval]);
+            return;
         } else {
             $minInterval = $interval;
             $maxInterval = $interval;

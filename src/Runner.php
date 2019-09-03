@@ -23,7 +23,13 @@ final class Runner
 {
     use MonologLoggerTrait;
 
+    const DEFAULT_INTERVAL_IN_SECONDS = 600;
+
     private $httpClient;
+
+    private $minInterval;
+
+    private $maxInterval;
 
     private $runningHours;
 
@@ -64,17 +70,8 @@ final class Runner
             return;
         }
 
-        $interval = getenv('INTERVAL') ? getenv('INTERVAL') : 10 * 60;
-        if (preg_match('/\A(?<min>[0-9]+)-(?<max>[0-9]+)\z/', $interval, $matches) === 1) {
-            $minInterval = $matches['min'];
-            $maxInterval = $matches['max'];
-        } elseif (!is_numeric($interval)) {
-            $this->logger->warning('Invalid Interval', ['interval' => $interval]);
-            return;
-        } else {
-            $minInterval = $interval;
-            $maxInterval = $interval;
-        }
+        $interval = getenv('INTERVAL') ?? self::DEFAULT_INTERVAL_IN_SECONDS;
+        list($this->minInterval, $this->maxInterval) = $this->calculateInterval($interval);
 
         $hours = getenv('HOURS') ? getenv('HOURS') : '0-23';
         $this->runningHours = $this->calculateRunningHours($hours);
@@ -83,7 +80,7 @@ final class Runner
             'Started',
             [
                 'URL' => $url,
-                'interval' => $interval,
+                'interval' => [$this->minInterval, $this->maxInterval],
                 'hours' => $this->runningHours,
             ]
         );
@@ -96,7 +93,7 @@ final class Runner
                 $this->logger->info('Skipped (not running time)');
             }
 
-            $intervalInSec = $this->getInterval($minInterval, $maxInterval);
+            $intervalInSec = $this->getInterval();
             $nextRuns = date('Y-m-d H:i:sP', time() + $intervalInSec);
             $this->logger->debug('Interval', ['seconds' => $intervalInSec, 'next' => $nextRuns]);
             sleep($intervalInSec);
@@ -145,17 +142,41 @@ final class Runner
 
     /**
      * Calculate interval in seconds
-     * @param int $min
-     * @param int $max
      * @return int
      */
-    private function getInterval(int $min, int $max) : int
+    private function getInterval() : int
     {
-        if ($min === $max || $max < $min) {
-            return $min;
+        if ($this->minInterval === $this->maxInterval || $this->maxInterval < $this->minInterval) {
+            return $this->minInterval;
         }
 
-        return mt_rand($min, $max);
+        return mt_rand($this->minInterval, $this->maxInterval);
+    }
+
+    /**
+     * Calculate interval option
+     * @param string $interval
+     * @return array tuple
+     */
+    private function calculateInterval(string $interval) : array
+    {
+        if (preg_match('/\A(?<min>[0-9]+)-(?<max>[0-9]+)\z/', $interval, $matches) === 1) {
+            return [
+                intval($matches['min']),
+                intval($matches['max']),
+            ];
+        } elseif (is_numeric($interval)) {
+            return [
+                intval($interval),  // min
+                intval($interval),  // max
+            ];
+        } else {
+            $this->logger->warning('Invalid Interval', ['interval' => $interval]);
+            return [
+                self::DEFAULT_INTERVAL_IN_SECONDS,  // min
+                self::DEFAULT_INTERVAL_IN_SECONDS,  // max
+            ];
+        }
     }
 
     /**

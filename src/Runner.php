@@ -50,7 +50,7 @@ final class Runner
     {
         require_once __DIR__ . '/../vendor/autoload.php';
 
-        $tz = getenv('TZ') ?? false;
+        $tz = getenv('TZ');
         if ($tz !== false) {
             date_default_timezone_set($tz);
         }

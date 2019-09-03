@@ -19,3 +19,14 @@ docker run --rm \
   -e HC_URL=https://your-app.herokuapp.com/hc.html \
   -d sameyasu/heroku-hc
 ```
+
+### Checking At Specific Hours
+
+To check at specific hours you can use `HOURS` variable like this.
+
+```
+docker run --rm \
+  -e HOURS=9-12,14-19 \
+  -e HC_URL=https://your-app.herokuapp.com/hc.html \
+  -d sameyasu/heroku-hc
+```

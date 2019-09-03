@@ -117,13 +117,13 @@ final class Runner
                     $result['body'] = $response->getBody()->getContents();
                     $result['ok'] = true;
                 } else {
-                    $this->logger->notice('Invalid StatusCode', [
+                    $this->logger->warning('Invalid StatusCode', [
                         'statusCode' => $response->getStatusCode()
                     ]);
                 }
             },
             function (RequestException $exception) {
-                $this->logger->notice('Rejected', [
+                $this->logger->warning('Rejected', [
                     'exception' => $exception
                 ]);
             }
@@ -192,7 +192,7 @@ final class Runner
                     if ($matches['start'] <= $matches['end'] && $matches['start'] >= 0 && $matches['end'] <= 23) {
                         return range($matches['start'], $matches['end']);
                     } else {
-                        $this->logger->notice(
+                        $this->logger->warning(
                             'Invalid range',
                             ['range' => $h, 'start' => $matches['start'], 'end' => $matches['end']]
                         );
@@ -201,7 +201,7 @@ final class Runner
                 } elseif (is_numeric($h)) {
                     return [intval($h)];
                 } else {
-                    $this->logger->notice('Invalid hour', ['hour' => $h]);
+                    $this->logger->warning('Invalid hour', ['hour' => $h]);
                     return [];
                 }
             },

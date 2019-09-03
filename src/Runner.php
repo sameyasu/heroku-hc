@@ -25,6 +25,8 @@ final class Runner
 
     private $httpClient;
 
+    private $runningHours;
+
     /**
      * Constructor
      **/
@@ -41,6 +43,11 @@ final class Runner
     public static function start() : void
     {
         require_once __DIR__ . '/../vendor/autoload.php';
+
+        $tz = getenv('TZ') ?? false;
+        if ($tz !== false) {
+            date_default_timezone_set($tz);
+        }
 
         $me = new self();
         $me->run();
@@ -69,11 +76,25 @@ final class Runner
             $maxInterval = $interval;
         }
 
-        $this->logger->info('Started', ['HC_URL' => $url, 'interval' => $interval]);
+        $hours = getenv('HOURS') ? getenv('HOURS') : '0-23';
+        $this->runningHours = $this->calculateRunningHours($hours);
+
+        $this->logger->info(
+            'Started',
+            [
+                'URL' => $url,
+                'interval' => $interval,
+                'hours' => $this->runningHours,
+            ]
+        );
 
         while (true) {
-            $result = $this->checkUrl($url);
-            $this->logger->info('Checked', ['result' => $result]);
+            if ($this->isRunningTime(time())) {
+                $result = $this->checkUrl($url);
+                $this->logger->info('Checked', ['result' => $result]);
+            } else {
+                $this->logger->info('Skipped (not running time)');
+            }
 
             $intervalInSec = $this->getInterval($minInterval, $maxInterval);
             $nextRuns = date('Y-m-d H:i:sP', time() + $intervalInSec);
@@ -135,5 +156,66 @@ final class Runner
         }
 
         return mt_rand($min, $max);
+    }
+
+    /**
+     * Calculate running hours
+     * @param string $hours
+     * @return array Map of hours
+     */
+    private function calculateRunningHours(string $hours) : array
+    {
+        $rangeHours = array_map(
+            function ($h) {
+                if (preg_match('/\A(?<start>[0-9]+)-(?<end>[0-9]+)\z/', $h, $matches) === 1) {
+                    if ($matches['start'] <= $matches['end'] && $matches['start'] >= 0 && $matches['end'] <= 23) {
+                        return range($matches['start'], $matches['end']);
+                    } else {
+                        $this->logger->notice(
+                            'Invalid range',
+                            ['range' => $h, 'start' => $matches['start'], 'end' => $matches['end']]
+                        );
+                        return [];
+                    }
+                } elseif (is_numeric($h)) {
+                    return [intval($h)];
+                } else {
+                    $this->logger->notice('Invalid hour', ['hour' => $h]);
+                    return [];
+                }
+            },
+            explode(',', $hours)
+        );
+
+        $runningHours = array_reduce(
+            $rangeHours,
+            function ($carry, $item) {
+                if (is_array($item)) {
+                    $carry = array_merge($carry, array_values($item));
+                } else {
+                    $carry[] = $item;
+                }
+                return $carry;
+            },
+            []
+        );
+
+        return array_values(
+            array_intersect(
+                range(0, 23),
+                $runningHours
+            )
+        );
+    }
+
+    /**
+     * Is it running time ?
+     * @param int $unixtime
+     * @return bool
+     */
+    private function isRunningTime(int $unixtime) : bool
+    {
+        $hour = date('G', $unixtime);
+        return in_array($hour, $this->runningHours, false);
     }
 }

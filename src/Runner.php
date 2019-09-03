@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 /**
  * HerokuHC/Runner
  *
@@ -64,16 +64,16 @@ final class Runner
      */
     public function run() : void
     {
-        $url = getenv('HC_URL');
+        $url = getenv('HC_URL') ?: '';
         if (preg_match('|\Ahttps?://|', $url, $matches) !== 1) {
             $this->logger->warning('Invalid URL', ['url' => $url]);
             return;
         }
 
-        $interval = getenv('INTERVAL') ?? self::DEFAULT_INTERVAL_IN_SECONDS;
+        $interval = getenv('INTERVAL') ?: '';
         list($this->minInterval, $this->maxInterval) = $this->calculateInterval($interval);
 
-        $hours = getenv('HOURS') ? getenv('HOURS') : '0-23';
+        $hours = getenv('HOURS') ?: '0-23';
         $this->runningHours = $this->calculateRunningHours($hours);
 
         $this->logger->info(

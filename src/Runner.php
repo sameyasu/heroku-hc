@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 /**
  * HerokuHC/Runner
  *
@@ -10,12 +10,6 @@
  **/
 namespace HerokuHC;
 
-use GuzzleHttp\Client;
-use GuzzleHttp\Promise\Promise;
-use GuzzleHttp\Promise\PromiseInterface;
-use Psr\Http\Message\ResponseInterface;
-use GuzzleHttp\Exception\RequestException;
-
 /**
  * Runner Class
  **/
@@ -23,7 +17,11 @@ final class Runner
 {
     use MonologLoggerTrait;
 
-    private $httpClient;
+    const DEFAULT_INTERVAL_IN_SECONDS = 600;
+
+    private $minInterval;
+
+    private $maxInterval;
 
     private $runningHours;
 
@@ -33,7 +31,6 @@ final class Runner
     private function __construct()
     {
         $this->initLogger();
-        $this->initHttpClient();
     }
 
     /**
@@ -44,7 +41,7 @@ final class Runner
     {
         require_once __DIR__ . '/../vendor/autoload.php';
 
-        $tz = getenv('TZ') ?? false;
+        $tz = getenv('TZ');
         if ($tz !== false) {
             date_default_timezone_set($tz);
         }
@@ -58,104 +55,81 @@ final class Runner
      */
     public function run() : void
     {
-        $url = getenv('HC_URL');
+        $url = getenv('HC_URL') ?: '';
         if (preg_match('|\Ahttps?://|', $url, $matches) !== 1) {
             $this->logger->warning('Invalid URL', ['url' => $url]);
             return;
         }
 
-        $interval = getenv('INTERVAL') ? getenv('INTERVAL') : 10 * 60;
-        if (preg_match('/\A(?<min>[0-9]+)-(?<max>[0-9]+)\z/', $interval, $matches) === 1) {
-            $minInterval = $matches['min'];
-            $maxInterval = $matches['max'];
-        } elseif (!is_numeric($interval)) {
-            $this->logger->warning('Invalid Interval', ['interval' => $interval]);
-            return;
-        } else {
-            $minInterval = $interval;
-            $maxInterval = $interval;
-        }
+        $interval = getenv('INTERVAL') ?: '';
+        list($this->minInterval, $this->maxInterval) = $this->calculateInterval($interval);
 
-        $hours = getenv('HOURS') ? getenv('HOURS') : '0-23';
+        $hours = getenv('HOURS') ?: '0-23';
         $this->runningHours = $this->calculateRunningHours($hours);
 
         $this->logger->info(
             'Started',
             [
                 'URL' => $url,
-                'interval' => $interval,
+                'interval' => [$this->minInterval, $this->maxInterval],
                 'hours' => $this->runningHours,
             ]
         );
 
+        $checker = new HttpUrlChecker();
+
         while (true) {
             if ($this->isRunningTime(time())) {
-                $result = $this->checkUrl($url);
-                $this->logger->info('Checked', ['result' => $result]);
+                $result = $checker->check($url);
+                $this->logger->info('Checked', ['result' => $result->toArray()]);
             } else {
                 $this->logger->info('Skipped (not running time)');
             }
 
-            $intervalInSec = $this->getInterval($minInterval, $maxInterval);
+            $intervalInSec = $this->getInterval();
             $nextRuns = date('Y-m-d H:i:sP', time() + $intervalInSec);
             $this->logger->debug('Interval', ['seconds' => $intervalInSec, 'next' => $nextRuns]);
             sleep($intervalInSec);
         }
     }
 
-    private function checkUrl(string $url) : array
+    /**
+     * Calculate interval in seconds
+     * @return int
+     */
+    private function getInterval() : int
     {
-        $result = [
-            'ok' => false
-        ];
-        $this->httpClient->requestAsync('GET', $url, [
-            'on_stats' => function ($stats) use (&$result) {
-                $result['transfer_time'] = $stats->getTransferTime();
-            }
-        ])
-        ->then(
-            function (ResponseInterface $response) use (&$result) {
-                $result['status_code'] = $response->getStatusCode();
-                if ($response->getStatusCode() === 200) {
-                    $result['body'] = $response->getBody()->getContents();
-                    $result['ok'] = true;
-                } else {
-                    $this->logger->notice('Invalid StatusCode', [
-                        'statusCode' => $response->getStatusCode()
-                    ]);
-                }
-            },
-            function (RequestException $exception) {
-                $this->logger->notice('Rejected', [
-                    'exception' => $exception
-                ]);
-            }
-        )
-        ->wait();
+        if ($this->minInterval === $this->maxInterval || $this->maxInterval < $this->minInterval) {
+            return $this->minInterval;
+        }
 
-        return $result;
-    }
-
-    private function initHttpClient() : void
-    {
-        $this->httpClient = new Client([
-            'timeout'  => 10.0,
-        ]);
+        return mt_rand($this->minInterval, $this->maxInterval);
     }
 
     /**
-     * Calculate interval in seconds
-     * @param int $min
-     * @param int $max
-     * @return int
+     * Calculate interval option
+     * @param string $interval
+     * @return array tuple
      */
-    private function getInterval(int $min, int $max) : int
+    private function calculateInterval(string $interval) : array
     {
-        if ($min === $max || $max < $min) {
-            return $min;
+        if (preg_match('/\A(?<min>[0-9]+)-(?<max>[0-9]+)\z/', $interval, $matches) === 1) {
+            return [
+                intval($matches['min']),
+                intval($matches['max']),
+            ];
+        } elseif (is_numeric($interval)) {
+            return [
+                intval($interval),  // min
+                intval($interval),  // max
+            ];
+        } else {
+            $this->logger->warning('Invalid Interval', ['interval' => $interval]);
+            return [
+                self::DEFAULT_INTERVAL_IN_SECONDS,  // min
+                self::DEFAULT_INTERVAL_IN_SECONDS,  // max
+            ];
         }
-
-        return mt_rand($min, $max);
     }
 
     /**
@@ -171,7 +145,7 @@ final class Runner
                     if ($matches['start'] <= $matches['end'] && $matches['start'] >= 0 && $matches['end'] <= 23) {
                         return range($matches['start'], $matches['end']);
                     } else {
-                        $this->logger->notice(
+                        $this->logger->warning(
                             'Invalid range',
                             ['range' => $h, 'start' => $matches['start'], 'end' => $matches['end']]
                         );
@@ -180,7 +154,7 @@ final class Runner
                 } elseif (is_numeric($h)) {
                     return [intval($h)];
                 } else {
-                    $this->logger->notice('Invalid hour', ['hour' => $h]);
+                    $this->logger->warning('Invalid hour', ['hour' => $h]);
                     return [];
                 }
             },

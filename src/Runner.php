@@ -25,8 +25,6 @@ final class Runner
 
     const DEFAULT_INTERVAL_IN_SECONDS = 600;
 
-    private $httpClient;
-
     private $minInterval;
 
     private $maxInterval;
@@ -39,7 +37,6 @@ final class Runner
     private function __construct()
     {
         $this->initLogger();
-        $this->initHttpClient();
     }
 
     /**
@@ -85,10 +82,12 @@ final class Runner
             ]
         );
 
+        $checker = new HttpUrlChecker();
+
         while (true) {
             if ($this->isRunningTime(time())) {
-                $result = $this->checkUrl($url);
-                $this->logger->info('Checked', ['result' => $result]);
+                $result = $checker->check($url);
+                $this->logger->info('Checked', ['result' => $result->toArray()]);
             } else {
                 $this->logger->info('Skipped (not running time)');
             }
@@ -98,46 +97,6 @@ final class Runner
             $this->logger->debug('Interval', ['seconds' => $intervalInSec, 'next' => $nextRuns]);
             sleep($intervalInSec);
         }
-    }
-
-    private function checkUrl(string $url) : array
-    {
-        $result = [
-            'ok' => false
-        ];
-        $this->httpClient->requestAsync('GET', $url, [
-            'on_stats' => function ($stats) use (&$result) {
-                $result['transfer_time'] = $stats->getTransferTime();
-            }
-        ])
-        ->then(
-            function (ResponseInterface $response) use (&$result) {
-                $result['status_code'] = $response->getStatusCode();
-                if ($response->getStatusCode() === 200) {
-                    $result['body'] = $response->getBody()->getContents();
-                    $result['ok'] = true;
-                } else {
-                    $this->logger->warning('Invalid StatusCode', [
-                        'statusCode' => $response->getStatusCode()
-                    ]);
-                }
-            },
-            function (RequestException $exception) {
-                $this->logger->warning('Rejected', [
-                    'exception' => $exception
-                ]);
-            }
-        )
-        ->wait();
-
-        return $result;
-    }
-
-    private function initHttpClient() : void
-    {
-        $this->httpClient = new Client([
-            'timeout'  => 10.0,
-        ]);
     }
 
     /**

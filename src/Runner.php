@@ -10,12 +10,6 @@
  **/
 namespace HerokuHC;
 
-use GuzzleHttp\Client;
-use GuzzleHttp\Promise\Promise;
-use GuzzleHttp\Promise\PromiseInterface;
-use Psr\Http\Message\ResponseInterface;
-use GuzzleHttp\Exception\RequestException;
-
 /**
  * Runner Class
  **/

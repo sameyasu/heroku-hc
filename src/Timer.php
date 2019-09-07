@@ -96,7 +96,7 @@ final class Timer
      * Get next interval in seconds
      * @return int
      */
-    protected function getNextIntarval() : int
+    private function getNextIntarval() : int
     {
         if ($this->minInterval === $this->maxInterval || $this->maxInterval < $this->minInterval) {
             return $this->minInterval;

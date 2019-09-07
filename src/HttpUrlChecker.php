@@ -79,6 +79,7 @@ class HttpUrlChecker
         )
         ->wait();
 
+        $this->logger->info('Checked', ['result' => $result->toArray()]);
         return $result;
     }
 }

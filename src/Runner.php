@@ -19,12 +19,6 @@ final class Runner
 
     const DEFAULT_INTERVAL_IN_SECONDS = 600;
 
-    private $minInterval;
-
-    private $maxInterval;
-
-    private $runningHours;
-
     /**
      * Constructor
      **/
@@ -62,48 +56,33 @@ final class Runner
         }
 
         $interval = getenv('INTERVAL') ?: '';
-        list($this->minInterval, $this->maxInterval) = $this->calculateInterval($interval);
+        list($minInterval, $maxInterval) = $this->calculateInterval($interval);
 
         $hours = getenv('HOURS') ?: '0-23';
-        $this->runningHours = $this->calculateRunningHours($hours);
+        $runningHours = $this->calculateRunningHours($hours);
 
         $this->logger->info(
             'Started',
             [
                 'URL' => $url,
-                'interval' => [$this->minInterval, $this->maxInterval],
-                'hours' => $this->runningHours,
+                'interval' => [$minInterval, $maxInterval],
+                'hours' => $runningHours,
             ]
         );
 
         $checker = new HttpUrlChecker();
 
-        while (true) {
-            if ($this->isRunningTime(time())) {
-                $result = $checker->check($url);
-                $this->logger->info('Checked', ['result' => $result->toArray()]);
-            } else {
-                $this->logger->info('Skipped (not running time)');
-            }
-
-            $intervalInSec = $this->getInterval();
-            $nextRuns = date('Y-m-d H:i:sP', time() + $intervalInSec);
-            $this->logger->debug('Interval', ['seconds' => $intervalInSec, 'next' => $nextRuns]);
-            sleep($intervalInSec);
-        }
-    }
-
-    /**
-     * Calculate interval in seconds
-     * @return int
-     */
-    private function getInterval() : int
-    {
-        if ($this->minInterval === $this->maxInterval || $this->maxInterval < $this->minInterval) {
-            return $this->minInterval;
-        }
-
-        return mt_rand($this->minInterval, $this->maxInterval);
+        $timer = (
+            new Timer(
+                // FIXME
+                function () use ($checker, $url) {
+                    $checker->check($url);
+                }
+            )
+        )
+        ->setRandomInterval($minInterval, $maxInterval)
+        ->setRunningHours($runningHours)
+        ->start();
     }
 
     /**
@@ -180,16 +159,5 @@ final class Runner
                 $runningHours
             )
         );
-    }
-
-    /**
-     * Is it running time ?
-     * @param int $unixtime
-     * @return bool
-     */
-    private function isRunningTime(int $unixtime) : bool
-    {
-        $hour = date('G', $unixtime);
-        return in_array($hour, $this->runningHours, false);
     }
 }

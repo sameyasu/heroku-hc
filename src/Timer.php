@@ -1,6 +1,6 @@
 <?php
 /**
- * HerokuHC/Runner
+ * HerokuHC/Timer
  *
  * @author sameyasu
  * @version 0.1

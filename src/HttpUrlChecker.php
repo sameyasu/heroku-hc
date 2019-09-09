@@ -26,13 +26,17 @@ class HttpUrlChecker
 
     private $httpClient;
 
+    private $url;
+
     /**
      * Constructor
+     * @param string $url
      */
-    public function __construct()
+    public function __construct(string $url)
     {
         $this->initLogger();
         $this->initHttpClient();
+        $this->url = $url;
     }
 
     /**
@@ -48,13 +52,12 @@ class HttpUrlChecker
 
     /**
      * Checks URL
-     * @param string $url
      * @return HttpUrlCheckerResult
      */
-    public function check(string $url) : HttpUrlCheckerResult
+    public function check() : HttpUrlCheckerResult
     {
         $result = new HttpUrlCheckerResult();
-        $this->httpClient->requestAsync('GET', $url, [
+        $this->httpClient->requestAsync('GET', $this->url, [
             'on_stats' => function ($stats) use (&$result) {
                 $result->transferTime = $stats->getTransferTime();
             }
@@ -79,6 +82,7 @@ class HttpUrlChecker
         )
         ->wait();
 
+        $this->logger->info('Checked', ['result' => $result->toArray()]);
         return $result;
     }
 }

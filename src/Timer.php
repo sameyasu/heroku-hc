@@ -98,7 +98,7 @@ final class Timer
                 $this->logger->info('Skipped (not running time)');
             }
 
-            $intervalInSec = $this->getNextIntarval();
+            $intervalInSec = $this->getNextInterval();
             $nextRuns = date('Y-m-d H:i:sP', time() + $intervalInSec);
             $this->logger->debug('Interval', ['seconds' => $intervalInSec, 'next' => $nextRuns]);
             sleep($intervalInSec);
@@ -109,7 +109,7 @@ final class Timer
      * Get next interval in seconds
      * @return int
      */
-    private function getNextIntarval() : int
+    private function getNextInterval() : int
     {
         if ($this->minInterval === $this->maxInterval || $this->maxInterval < $this->minInterval) {
             return $this->minInterval;

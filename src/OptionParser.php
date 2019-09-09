@@ -104,23 +104,10 @@ final class OptionParser
             explode(',', $hours)
         );
 
-        $runningHours = array_reduce(
-            $rangeHours,
-            function ($carry, $item) {
-                if (is_array($item)) {
-                    $carry = array_merge($carry, array_values($item));
-                } else {
-                    $carry[] = $item;
-                }
-                return $carry;
-            },
-            []
-        );
-
         return array_values(
             array_intersect(
                 range(0, 23),
-                $runningHours
+                $this->flatten($rangeHours)
             )
         );
     }
@@ -159,8 +146,23 @@ final class OptionParser
             explode(',', $weekdays)
         );
 
-        $runningWeekdays = array_reduce(
-            $rangeWeekdays,
+        return array_values(
+            array_intersect(
+                range(1, 7),
+                $this->flatten($rangeWeekdays)
+            )
+        );
+    }
+
+    /**
+     * flatten array values
+     * @param array $origin
+     * @return array
+     */
+    private function flatten(array $origin) : array
+    {
+        return array_reduce(
+            $origin,
             function ($carry, $item) {
                 if (is_array($item)) {
                     $carry = array_merge($carry, array_values($item));
@@ -170,13 +172,6 @@ final class OptionParser
                 return $carry;
             },
             []
-        );
-
-        return array_values(
-            array_intersect(
-                range(1, 7),
-                $runningWeekdays
-            )
         );
     }
 }

@@ -19,6 +19,7 @@ final class OptionParser
 
     const DEFAULT_INTERVAL_IN_SECONDS = 600;
     const DEFAULT_HOURS = '0-23';
+    const DEFAULT_WEEKDAYS = '1,2,3,4,5,6,7';
 
     /**
      * Constructor
@@ -120,6 +121,61 @@ final class OptionParser
             array_intersect(
                 range(0, 23),
                 $runningHours
+            )
+        );
+    }
+
+    /**
+     * Parse WEEKDAYS option
+     * @param string $weekdays
+     * @return array Array of weekdays
+     */
+    public function parseWeekdays(string $weekdays) : array
+    {
+        if (empty($weekdays)) {
+            // all days
+            $weekdays = self::DEFAULT_WEEKDAYS;
+        }
+
+        $rangeWeekdays = array_map(
+            function ($w) {
+                if (preg_match('/\A(?<start>[1-7]+)-(?<end>[1-7]+)\z/', $w, $matches) === 1) {
+                    if ($matches['start'] <= $matches['end']) {
+                        return range($matches['start'], $matches['end']);
+                    } else {
+                        $this->logger->warning(
+                            'Invalid weekday range',
+                            ['range' => $w, 'start' => $matches['start'], 'end' => $matches['end']]
+                        );
+                        return [];
+                    }
+                } elseif (is_numeric($w)) {
+                    return [intval($w)];
+                } else {
+                    $this->logger->warning('Invalid weekday', ['number' => $w]);
+                    return [];
+                }
+            },
+            explode(',', $weekdays)
+        );
+
+        $runningWeekdays = array_reduce(
+            $rangeWeekdays,
+            function ($carry, $item) {
+                if (is_array($item)) {
+                    $carry = array_merge($carry, array_values($item));
+                } else {
+                    $carry[] = $item;
+                }
+                return $carry;
+            },
+            []
+        );
+
+        return array_values(
+            array_intersect(
+                range(1, 7),
+                $runningWeekdays
             )
         );
     }

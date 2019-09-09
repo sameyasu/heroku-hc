@@ -55,12 +55,14 @@ final class Runner
 
         list($minInterval, $maxInterval) = $parser->parseInterval(getenv('INTERVAL') ?: '');
         $runningHours = $parser->parseHours(getenv('HOURS') ?: '');
+        $runningWeekdays = $parser->parseWeekdays(getenv('WEEKDAYS') ?: '');
 
         $this->logger->info(
             'Started Options',
             [
                 'interval' => [$minInterval, $maxInterval],
                 'hours' => $runningHours,
+                'weekdays' => $runningWeekdays,
             ]
         );
 
@@ -73,6 +75,7 @@ final class Runner
         ))
         ->setRandomInterval($minInterval, $maxInterval)
         ->setRunningHours($runningHours)
+        ->setRunningWeekdays($runningWeekdays)
         ->start();
     }
 }

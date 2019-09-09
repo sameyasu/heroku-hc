@@ -25,6 +25,8 @@ final class Timer
 
     private $runningHours;
 
+    private $runningWeekdays;
+
     /**
      * Constructor
      **/
@@ -71,6 +73,17 @@ final class Timer
     }
 
     /**
+     * Set running weekdays in array
+     * @param array $weekdays
+     * @return self
+     */
+    public function setRunningWeekdays(array $weekdays) : self
+    {
+        $this->runningWeekdays = $weekdays;
+        return $this;
+    }
+
+    /**
      * Start timer
      * @return void
      */
@@ -112,7 +125,14 @@ final class Timer
      */
     private function isRunningTime(int $unixtime) : bool
     {
-        $hour = date('G', $unixtime);
-        return in_array($hour, $this->runningHours, false);
+        $hour = intval(date('G', $unixtime));
+        if (in_array($hour, $this->runningHours, false)) {
+            $weekday = intval(date('N', $unixtime));
+            if (in_array($weekday, $this->runningWeekdays, false)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

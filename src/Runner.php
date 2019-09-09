@@ -70,16 +70,13 @@ final class Runner
             ]
         );
 
-        $checker = new HttpUrlChecker();
+        $checker = new HttpUrlChecker($url);
 
-        $timer = (
-            new Timer(
-                // FIXME
-                function () use ($checker, $url) {
-                    $checker->check($url);
-                }
-            )
-        )
+        (new Timer(
+            function () use ($checker) {
+                $checker->check();
+            }
+        ))
         ->setRandomInterval($minInterval, $maxInterval)
         ->setRunningHours($runningHours)
         ->start();
